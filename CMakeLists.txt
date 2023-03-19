@@ -146,6 +146,9 @@ set(LLVM_DISTRIBUTION_COMPONENTS
     llvm-size
     llvm-strip
     llvm-symbolizer
+    llvm-link
+    llc
+    opt
     LTO
     CACHE STRING ""
 )
@@ -160,9 +163,14 @@ installed by the install-llvm-toolchain target"
 )
 set(LLVM_ENABLE_PROJECTS clang;lld CACHE STRING "")
 set(LLVM_TARGETS_TO_BUILD AArch64;ARM CACHE STRING "")
+<<<<<<< feature/contrib
 set(LLVM_DEFAULT_TARGET_TRIPLE aarch64-linux-gnu CACHE STRING "")
 set(LLVM_APPEND_VC_REV OFF CACHE BOOL "")
 set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
+=======
+set(LLVM_DEFAULT_TARGET_TRIPLE arm-none-eabi CACHE STRING "")
+set(LLVM_TARGET_ARCH arm CACHE STRING "")
+>>>>>>> 7e7fbfc at least the libraries libclang_rt.profile.a are generated
 set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
 
 # Default to a release build
@@ -754,6 +762,8 @@ function(add_libcxx_libcxxabi_libunwind_tests variant)
     endforeach()
 endfunction()
 
+include(contrib/contrib.cmake)
+
 function(make_config_cfg directory variant flags)
     # Create clang configuration files
     # https://clang.llvm.org/docs/UsersManual.html#configuration-files
@@ -840,6 +850,7 @@ function(add_library_variants)
             else()
                 add_libcxx_libcxxabi_libunwind_tests("${variant}")
             endif()
+            add_contrib_libs("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}")
         endif()
 
         install(
