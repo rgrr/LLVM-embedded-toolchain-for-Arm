@@ -163,14 +163,10 @@ installed by the install-llvm-toolchain target"
 )
 set(LLVM_ENABLE_PROJECTS clang;lld CACHE STRING "")
 set(LLVM_TARGETS_TO_BUILD AArch64;ARM CACHE STRING "")
-<<<<<<< feature/contrib
-set(LLVM_DEFAULT_TARGET_TRIPLE aarch64-linux-gnu CACHE STRING "")
-set(LLVM_APPEND_VC_REV OFF CACHE BOOL "")
-set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
-=======
 set(LLVM_DEFAULT_TARGET_TRIPLE arm-none-eabi CACHE STRING "")
 set(LLVM_TARGET_ARCH arm CACHE STRING "")
->>>>>>> 7e7fbfc at least the libraries libclang_rt.profile.a are generated
+set(LLVM_APPEND_VC_REV OFF CACHE BOOL "")
+set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
 set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
 
 # Default to a release build
