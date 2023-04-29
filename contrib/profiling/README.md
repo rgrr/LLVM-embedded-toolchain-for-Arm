@@ -14,7 +14,7 @@ libraries are not required because the profiling library provides its own versio
 
 ## Building libclang_rt.profile.a
 
-Building the profiling library is controlled with the **LLVM_TOOLCHAIN_CONTRIB_PROFIL** switch on cmake
+Building the profiling library is controlled with the **LLVM_TOOLCHAIN_CONTRIB_PROFILE** switch on cmake
 invocation.  To include the profiling library use:
 
 ```bash
