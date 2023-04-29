@@ -52,6 +52,12 @@ function(add_contrib_lib_rtt directory variant target_triple flags libc_target)
         POST_BUILD
         COMMAND      "${CMAKE_COMMAND}" -E copy "${INSTALL_DIR}/src/${LIB_RTT}-build/librtt.a"
                                                 "${LLVM_BINARY_DIR}/${directory}/lib"
+        COMMAND      "${CMAKE_COMMAND}" -E copy "${INSTALL_DIR}/src/${LIB_RTT}-build/librtt_stdio.a"
+                                                "${LLVM_BINARY_DIR}/${directory}/lib"
+        COMMAND      "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/contrib/rtt/SEGGER/Config/SEGGER_RTT_Conf.h"
+                                                "${LLVM_BINARY_DIR}/${directory}/include/SEGGER/Config"
+        COMMAND      "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/contrib/rtt/SEGGER/RTT/SEGGER_RTT.h"
+                                                "${LLVM_BINARY_DIR}/${directory}/include/SEGGER/RTT"
     )
 
     add_dependencies(
