@@ -34,6 +34,21 @@ target_link_libraries(${LIB_RTT_STDIO} PUBLIC
 
 
 #
+# bare SysView files from Segger
+# 
+set(LIB_RTT_SYSVIEW rtt_sysview)
+
+add_library(${LIB_RTT_SYSVIEW} STATIC
+    rtt_sysview.c
+    SEGGER/RTT/SEGGER_SYSVIEW.c
+)
+
+target_link_libraries(${LIB_RTT_SYSVIEW} PUBLIC 
+    ${LIB_RTT}
+)
+
+
+#
 # install output files
 #
 install(
