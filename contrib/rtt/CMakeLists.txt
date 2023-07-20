@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(rtt)
+project(rtt C ASM)
 
 #
 # bare RTT files from Segger
@@ -28,10 +28,7 @@ add_library(${LIB_RTT_STDIO} STATIC
     rtt_stdio.c
 )
 
-target_link_libraries(${LIB_RTT_STDIO} PUBLIC 
-    ${LIB_RTT}
-)
-
+target_link_libraries(${LIB_RTT_STDIO} PUBLIC ${LIB_RTT})
 
 #
 # bare SysView files from Segger
@@ -43,9 +40,7 @@ add_library(${LIB_RTT_SYSVIEW} STATIC
     SEGGER/RTT/SEGGER_SYSVIEW.c
 )
 
-target_link_libraries(${LIB_RTT_SYSVIEW} PUBLIC 
-    ${LIB_RTT}
-)
+target_link_libraries(${LIB_RTT_SYSVIEW} PUBLIC ${LIB_RTT})
 
 
 #
@@ -54,16 +49,22 @@ target_link_libraries(${LIB_RTT_SYSVIEW} PUBLIC
 install(
     FILES       ${CMAKE_BINARY_DIR}/lib${LIB_RTT}.a
                 ${CMAKE_BINARY_DIR}/lib${LIB_RTT_STDIO}.a
+                ${CMAKE_BINARY_DIR}/lib${LIB_RTT_SYSVIEW}.a
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/
     COMPONENT   llvm-toolchain-libs
 )
 install(
-    FILES       SEGGER/Config/SEGGER_RTT_Conf.h
+    FILES       SEGGER/Config/Global.h
+                SEGGER/Config/SEGGER_RTT_Conf.h
+                SEGGER/Config/SEGGER_SYSVIEW_Conf.h
     DESTINATION ${CMAKE_INSTALL_PREFIX}/include/SEGGER/Config/
     COMPONENT   llvm-toolchain-libs
 )
 install(
-    FILES       SEGGER/RTT/SEGGER_RTT.h
+    FILES       SEGGER/RTT/SEGGER.h
+                SEGGER/RTT/SEGGER_RTT.h
+                SEGGER/RTT/SEGGER_SYSVIEW.h
+                SEGGER/RTT/SEGGER_SYSVIEW_ConfDefaults.h
     DESTINATION ${CMAKE_INSTALL_PREFIX}/include/SEGGER/RTT/
     COMPONENT   llvm-toolchain-libs
 )
