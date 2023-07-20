@@ -912,6 +912,15 @@ function(add_library_variant target_arch)
             add_compiler_rt_tests("${variant}")
             add_libcxx_libcxxabi_libunwind_tests("${variant}")
         endif()
+
+        add_contrib_libs(
+            "${directory}"
+            "${variant}"
+            "${target_triple}"
+            "${VARIANT_COMPILE_FLAGS}"
+            "${lit_test_executor}"
+            "picolibc_${variant}-install"
+        )
     endif()
 
     string(APPEND multilib_yaml_content "- Dir: ${parent_dir_name}/${variant}\n")

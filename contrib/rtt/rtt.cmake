@@ -1,6 +1,6 @@
 # Configuration for librtt.a
 
-function(add_contrib_lib_rtt directory variant target_triple flags libc_target)
+function(add_contrib_lib_rtt directory variant target_triple flags test_executor libc_target)
     get_runtimes_flags("${directory}" "${flags}")
 
     set(LIB_RTT rtt_${variant})
@@ -34,10 +34,11 @@ function(add_contrib_lib_rtt directory variant target_triple flags libc_target)
                                    -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                    -Dllvmproject_SOURCE_DIR=${llvmproject_SOURCE_DIR}
                                    -Dpicolibc_SOURCE_DIR=${picolibc_SOURCE_DIR}
+        STEP_TARGETS               build
         USES_TERMINAL_CONFIGURE    TRUE
         USES_TERMINAL_BUILD        TRUE
-        USES_TERMINAL_INSTALL      TRUE
-        USES_TERMINAL_TEST         TRUE
+        USES_TERMINAL_INSTALL      FALSE
+        USES_TERMINAL_TEST         FALSE
         LIST_SEPARATOR             ,
         # Always run the build command so that incremental builds are correct.
         BUILD_ALWAYS               TRUE
@@ -62,6 +63,6 @@ function(add_contrib_lib_rtt directory variant target_triple flags libc_target)
 
     add_dependencies(
         llvm-toolchain-runtimes
-        rtt_${variant}
+        ${LIB_RTT}
     )
 endfunction()
