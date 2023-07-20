@@ -788,21 +788,69 @@ function(add_library_variants)
 
         get_compiler_rt_target_triple(${target_arch})
 
-        set(directory "lib/clang-runtimes/${parent_dir_name}/${variant}")
-        set(compile_flags "--target=${target_triple} ${compile_flags}")
-        make_config_cfg("${directory}" "${variant}" "${compile_flags}")
-        set(variant_options)
-        if(NOT PREBUILT_TARGET_LIBRARIES)
-            add_picolibc("${directory}" "${variant}" "${target_triple}" "${compile_flags}" "${qemu_params}" variant_options)
-            add_compiler_rt("${directory}" "${variant}" "${target_triple}" "${compile_flags}" "picolibc_${variant}")
-            list(APPEND variant_options ${picolibc_specific_runtimes_options})
-            add_libcxx_libcxxabi_libunwind("${directory}" "${variant}" "${target_triple}" "${compile_flags}" "picolibc_${variant}" "${variant_options}")
-            if(compile_flags MATCHES "-march=armv8")
-                message("C++ runtime libraries tests disabled for ${variant}")
-            else()
-                add_libcxx_libcxxabi_libunwind_tests("${variant}")
-            endif()
+    set(directory "${TARGET_LIBRARIES_DIR}/${parent_dir_name}/${variant}")
+    set(VARIANT_COMPILE_FLAGS "--target=${target_triple} ${VARIANT_COMPILE_FLAGS}")
+    make_config_cfg("${directory}" "${variant}" "${VARIANT_COMPILE_FLAGS}")
+    get_test_executor_params(
+        "${target_triple}"
+        "${VARIANT_QEMU_MACHINE}"
+        "${VARIANT_QEMU_CPU}"
+        "${VARIANT_QEMU_PARAMS}"
+    )
+    set(
+        lit_test_executor
+        ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
+        ${test_executor_params}
+    )
+    list(JOIN lit_test_executor " " lit_test_executor)
+    if(NOT PREBUILT_TARGET_LIBRARIES)
+        add_picolibc(
+            "${directory}"
+            "${variant}"
+            "${target_triple}"
+            "${VARIANT_COMPILE_FLAGS}"
+            "${test_executor_params}"
+            "${VARIANT_FLASH_ADDRESS}"
+            "${VARIANT_FLASH_SIZE}"
+            "${VARIANT_RAM_ADDRESS}"
+            "${VARIANT_RAM_SIZE}"
+            "${VARIANT_STACK_SIZE}"
+        )
+        add_compiler_rt(
+            "${directory}"
+            "${variant}"
+            "${target_triple}"
+            "${VARIANT_COMPILE_FLAGS}"
+            "${lit_test_executor}"
+            "picolibc_${variant}-install"
+        )
+        add_libcxx_libcxxabi_libunwind(
+            "${directory}"
+            "${variant}"
+            "${target_triple}"
+            "${VARIANT_COMPILE_FLAGS}"
+            "${lit_test_executor}"
+            "picolibc_${variant}-install"
+            "${picolibc_specific_runtimes_options}"
+        )
+        if(VARIANT_COMPILE_FLAGS MATCHES "-march=armv8")
+            message("C++ runtime libraries tests disabled for ${variant}")
+        else()
+            add_custom_target(check-llvm-toolchain-runtimes-${variant})
+            add_dependencies(check-llvm-toolchain-runtimes check-llvm-toolchain-runtimes-${variant})
+            add_compiler_rt_tests("${variant}")
+            add_libcxx_libcxxabi_libunwind_tests("${variant}")
         endif()
+
+        add_contrib_libs(
+            "${directory}"
+            "${variant}"
+            "${target_triple}"
+            "${VARIANT_COMPILE_FLAGS}"
+            "${lit_test_executor}"
+            "picolibc_${variant}-install"
+        )
+    endif()
 
         string(APPEND multilib_variants "- Dir: ${parent_dir_name}/${variant}\n")
 

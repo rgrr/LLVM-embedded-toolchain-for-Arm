@@ -1,6 +1,6 @@
 # Configuration for libclang_rt.profile.a
 
-function(add_contrib_lib_profile directory variant target_triple flags libc_target)
+function(add_contrib_lib_profile directory variant target_triple flags test_executor libc_target)
     get_runtimes_flags("${directory}" "${flags}")
 
     set(LIB_PROFILE compiler_rt_profile_${variant})
@@ -14,7 +14,7 @@ function(add_contrib_lib_profile directory variant target_triple flags libc_targ
         CMAKE_ARGS                 -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar${CMAKE_EXECUTABLE_SUFFIX}
                                    -DCMAKE_ASM_COMPILER_TARGET=${target_triple}
                                    -DCMAKE_ASM_FLAGS=${runtimes_flags}
-                                   -DCMAKE_BUILD_TYPE=Release
+                                   -DCMAKE_BUILD_TYPE=MinSizeRel
                                    -DCMAKE_CXX_COMPILER=${LLVM_BINARY_DIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}
                                    -DCMAKE_CXX_COMPILER_TARGET=${target_triple}
                                    -DCMAKE_CXX_FLAGS=${runtimes_flags}
@@ -34,7 +34,9 @@ function(add_contrib_lib_profile directory variant target_triple flags libc_targ
                                    -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                    -Dllvmproject_SOURCE_DIR=${llvmproject_SOURCE_DIR}
                                    -Dpicolibc_SOURCE_DIR=${picolibc_SOURCE_DIR}
-        USES_TERMINAL_CONFIGURE    TRUE
+
+        STEP_TARGETS               build install
+        USES_TERMINAL_CONFIGURE    FALSE
         USES_TERMINAL_BUILD        TRUE
         USES_TERMINAL_INSTALL      TRUE
         USES_TERMINAL_TEST         TRUE
@@ -56,6 +58,6 @@ function(add_contrib_lib_profile directory variant target_triple flags libc_targ
 
     add_dependencies(
         llvm-toolchain-runtimes
-        compiler_rt_profile_${variant}
+        ${LIB_PROFILE}
     )
 endfunction()

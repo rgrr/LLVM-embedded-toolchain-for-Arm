@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-
+project(lang_rt.profile)
 
 set(LIB_PROFILE clang_rt.profile)
 
@@ -17,4 +17,10 @@ target_include_directories(${LIB_PROFILE} PRIVATE
     ${llvmproject_SOURCE_DIR}/compiler-rt/include
     ${llvmproject_SOURCE_DIR}/compiler-rt/lib/profile
     ${picolibc_SOURCE_DIR}/semihost/
+)
+
+install(
+    FILES       "README.md"
+    DESTINATION "/tmp/lib/profile"
+    COMPONENT   llvm-toolchain-libs
 )
