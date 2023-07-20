@@ -9,7 +9,7 @@ function(add_contrib_lib_profile directory variant target_triple flags test_exec
         ${LIB_PROFILE}
         SOURCE_DIR                 ${CMAKE_SOURCE_DIR}/contrib/profiling
         PREFIX                     compiler-rt-profile/${variant}
-        INSTALL_DIR                compiler-rt-profile/${variant}
+        INSTALL_DIR                ${LLVM_BINARY_DIR}/${directory}
         DEPENDS                    clang lld llvm-ar llvm-config llvm-nm llvm-ranlib ${libc_target}
         CMAKE_ARGS                 -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar${CMAKE_EXECUTABLE_SUFFIX}
                                    -DCMAKE_ASM_COMPILER_TARGET=${target_triple}
@@ -21,10 +21,12 @@ function(add_contrib_lib_profile directory variant target_triple flags test_exec
                                    -DCMAKE_C_COMPILER=${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}
                                    -DCMAKE_C_COMPILER_TARGET=${target_triple}
                                    -DCMAKE_C_FLAGS=${runtimes_flags}
-                                   -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
-                                   -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
                                    -DCMAKE_NM=${LLVM_BINARY_DIR}/bin/llvm-nm${CMAKE_EXECUTABLE_SUFFIX}
                                    -DCMAKE_RANLIB=${LLVM_BINARY_DIR}/bin/llvm-ranlib${CMAKE_EXECUTABLE_SUFFIX}
+                                   # Parameters for the underlying CMakeLists.txt
+                                   -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
+                                   -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+                                   -DCMAKE_BUILD_PREFIX=${LLVM_BINARY_DIR}/../compiler-rt-profile/${variant}/src/${LIB_PROFILE}-build
                                    # Let CMake know we're cross-compiling
                                    -DCMAKE_SYSTEM_NAME=Generic
                                    -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
@@ -46,16 +48,6 @@ function(add_contrib_lib_profile directory variant target_triple flags test_exec
         CONFIGURE_HANDLED_BY_BUILD TRUE
     )
     
-    ExternalProject_Get_Property(${LIB_PROFILE} INSTALL_DIR)
-    
-    # Copy generated library to its detination. 
-    add_custom_command(
-        TARGET       ${LIB_PROFILE}
-        POST_BUILD
-        COMMAND      "${CMAKE_COMMAND}" -E copy "${INSTALL_DIR}/src/${LIB_PROFILE}-build/libclang_rt.profile.a"
-                                                "${LLVM_BINARY_DIR}/${directory}/lib"
-    )
-
     add_dependencies(
         llvm-toolchain-runtimes
         ${LIB_PROFILE}
