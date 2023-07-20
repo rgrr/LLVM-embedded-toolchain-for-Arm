@@ -12,7 +12,6 @@ add_library(${LIB_PROFILE} STATIC
     ${llvmproject_SOURCE_DIR}/compiler-rt/lib/profile/InstrProfilingWriter.c
 )
 
-# List of include directories
 target_include_directories(${LIB_PROFILE} PRIVATE
     ${llvmproject_SOURCE_DIR}/compiler-rt/include
     ${llvmproject_SOURCE_DIR}/compiler-rt/lib/profile
@@ -20,7 +19,7 @@ target_include_directories(${LIB_PROFILE} PRIVATE
 )
 
 install(
-    FILES       ${CMAKE_BUILD_PREFIX}/lib${LIB_PROFILE}.a
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+    FILES       ${CMAKE_BINARY_DIR}/lib${LIB_PROFILE}.a
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/
     COMPONENT   llvm-toolchain-libs
 )

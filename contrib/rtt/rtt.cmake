@@ -9,7 +9,7 @@ function(add_contrib_lib_rtt directory variant target_triple flags test_executor
         ${LIB_RTT}
         SOURCE_DIR                 ${CMAKE_SOURCE_DIR}/contrib/rtt
         PREFIX                     librtt/${variant}
-        INSTALL_DIR                librtt/${variant}
+        INSTALL_DIR                ${LLVM_BINARY_DIR}/${directory}
         DEPENDS                    clang lld llvm-ar llvm-config llvm-nm llvm-ranlib ${libc_target}
         CMAKE_ARGS                 -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar${CMAKE_EXECUTABLE_SUFFIX}
                                    -DCMAKE_ASM_COMPILER_TARGET=${target_triple}
@@ -21,10 +21,11 @@ function(add_contrib_lib_rtt directory variant target_triple flags test_executor
                                    -DCMAKE_C_COMPILER=${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}
                                    -DCMAKE_C_COMPILER_TARGET=${target_triple}
                                    -DCMAKE_C_FLAGS=${runtimes_flags}
-                                   -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
-                                   -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
                                    -DCMAKE_NM=${LLVM_BINARY_DIR}/bin/llvm-nm${CMAKE_EXECUTABLE_SUFFIX}
                                    -DCMAKE_RANLIB=${LLVM_BINARY_DIR}/bin/llvm-ranlib${CMAKE_EXECUTABLE_SUFFIX}
+                                   # Parameters for the underlying CMakeLists.txt
+                                   -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
+                                   -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
                                    # Let CMake know we're cross-compiling
                                    -DCMAKE_SYSTEM_NAME=Generic
                                    -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
@@ -34,33 +35,18 @@ function(add_contrib_lib_rtt directory variant target_triple flags test_executor
                                    -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                    -Dllvmproject_SOURCE_DIR=${llvmproject_SOURCE_DIR}
                                    -Dpicolibc_SOURCE_DIR=${picolibc_SOURCE_DIR}
-        STEP_TARGETS               build
-        USES_TERMINAL_CONFIGURE    TRUE
+
+        STEP_TARGETS               build install
+        USES_TERMINAL_CONFIGURE    FALSE
         USES_TERMINAL_BUILD        TRUE
-        USES_TERMINAL_INSTALL      FALSE
-        USES_TERMINAL_TEST         FALSE
+        USES_TERMINAL_INSTALL      TRUE
+        USES_TERMINAL_TEST         TRUE
         LIST_SEPARATOR             ,
         # Always run the build command so that incremental builds are correct.
         BUILD_ALWAYS               TRUE
         CONFIGURE_HANDLED_BY_BUILD TRUE
     )
     
-    ExternalProject_Get_Property(${LIB_RTT} INSTALL_DIR)
-    
-    # Copy generated library to its detination. 
-    add_custom_command(
-        TARGET       ${LIB_RTT}
-        POST_BUILD
-        COMMAND      "${CMAKE_COMMAND}" -E copy "${INSTALL_DIR}/src/${LIB_RTT}-build/librtt.a"
-                                                "${LLVM_BINARY_DIR}/${directory}/lib"
-        COMMAND      "${CMAKE_COMMAND}" -E copy "${INSTALL_DIR}/src/${LIB_RTT}-build/librtt_stdio.a"
-                                                "${LLVM_BINARY_DIR}/${directory}/lib"
-        COMMAND      "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/contrib/rtt/SEGGER/Config/SEGGER_RTT_Conf.h"
-                                                "${LLVM_BINARY_DIR}/${directory}/include/SEGGER/Config"
-        COMMAND      "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/contrib/rtt/SEGGER/RTT/SEGGER_RTT.h"
-                                                "${LLVM_BINARY_DIR}/${directory}/include/SEGGER/RTT"
-    )
-
     add_dependencies(
         llvm-toolchain-runtimes
         ${LIB_RTT}

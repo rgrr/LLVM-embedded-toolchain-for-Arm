@@ -26,7 +26,6 @@ function(add_contrib_lib_profile directory variant target_triple flags test_exec
                                    # Parameters for the underlying CMakeLists.txt
                                    -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
                                    -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-                                   -DCMAKE_BUILD_PREFIX=${LLVM_BINARY_DIR}/../compiler-rt-profile/${variant}/src/${LIB_PROFILE}-build
                                    # Let CMake know we're cross-compiling
                                    -DCMAKE_SYSTEM_NAME=Generic
                                    -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
