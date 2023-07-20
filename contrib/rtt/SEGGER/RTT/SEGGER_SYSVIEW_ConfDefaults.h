@@ -62,8 +62,8 @@ Revision: $Rev: 26230 $
 **********************************************************************
 */
 
-#include "SEGGER_SYSVIEW_Conf.h"
-#include "SEGGER_RTT_Conf.h"
+#include "../Config/SEGGER_SYSVIEW_Conf.h"
+#include "../Config/SEGGER_RTT_Conf.h"
 
 #ifdef __cplusplus
 extern "C" {
