@@ -20,7 +20,7 @@ target_include_directories(${LIB_PROFILE} PRIVATE
 )
 
 install(
-    FILES       "README.md"
-    DESTINATION "/tmp/lib/profile"
+    FILES       ${CMAKE_BUILD_PREFIX}/lib${LIB_PROFILE}.a
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
     COMPONENT   llvm-toolchain-libs
 )
