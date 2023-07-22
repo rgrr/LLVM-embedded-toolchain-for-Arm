@@ -14,7 +14,7 @@ function(add_contrib_lib_profile directory variant target_triple flags test_exec
         CMAKE_ARGS                 -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar${CMAKE_EXECUTABLE_SUFFIX}
                                    -DCMAKE_ASM_COMPILER_TARGET=${target_triple}
                                    -DCMAKE_ASM_FLAGS=${runtimes_flags}
-                                   -DCMAKE_BUILD_TYPE=MinSizeRel
+                                   -DCMAKE_BUILD_TYPE=Release
                                    -DCMAKE_CXX_COMPILER=${LLVM_BINARY_DIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}
                                    -DCMAKE_CXX_COMPILER_TARGET=${target_triple}
                                    -DCMAKE_CXX_FLAGS=${runtimes_flags}
