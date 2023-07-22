@@ -67,7 +67,8 @@ install(
     COMPONENT   llvm-toolchain-libs
 )
 install(
-    FILES       SEGGER/RTT/SEGGER.h
+    FILES       SYSVIEW.h
+                SEGGER/RTT/SEGGER.h
                 SEGGER/RTT/SEGGER_RTT.h
                 SEGGER/RTT/SEGGER_SYSVIEW.h
                 SEGGER/RTT/SEGGER_SYSVIEW_ConfDefaults.h
