@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 project(rtt C ASM)
 
+
 #
 # bare RTT files from Segger
 #
@@ -28,7 +29,10 @@ add_library(${LIB_RTT_STDIO} STATIC
     rtt_stdio.c
 )
 
-target_link_libraries(${LIB_RTT_STDIO} PUBLIC ${LIB_RTT})
+target_link_libraries(${LIB_RTT_STDIO} PUBLIC
+    ${LIB_RTT}
+)
+
 
 #
 # bare SysView files from Segger
@@ -40,7 +44,9 @@ add_library(${LIB_RTT_SYSVIEW} STATIC
     SEGGER/RTT/SEGGER_SYSVIEW.c
 )
 
-target_link_libraries(${LIB_RTT_SYSVIEW} PUBLIC ${LIB_RTT})
+target_link_libraries(${LIB_RTT_SYSVIEW} PUBLIC
+    ${LIB_RTT}
+)
 
 
 #
