@@ -1,0 +1,147 @@
+:imagesdir: doc/png
+:source-highlighter: rouge
+:toc:
+:toclevels: 5
+
+# RTT
+
+NOTE: RTT support is experimental
+
+## Overview
+
+https://wiki.segger.com/RTT[RTT] stands for "Real Time Transfer" and uses the Serial Wire Debug (SWD) interface of the MCU.
+RTT allows multiplexing of several logical channels on one physical channel (i.e. SWD with three wires).
+Transfer speed is limited by the MCUs Debug Access Port (DAP) and the capabilities of the debug probe.
+
+One standard task for RTT is debug console I/O, the other support for Seggers SystemView.  Both
+cases are covered by the below libraries.
+
+On host side either tooling like https://pyocd.io/[pyOCD] or https://openocd.org/[OpenOCD]
+or the debug probe like https://github.com/rgrr/yapicoprobe[YaPicoprobe] fetch the RTT data from the target.
+
+
+## What's included?
+
+Three libraries are built:
+
+* `librtt.a` - includes only the Segger files and allows e.g console I/O via
+  RTT library functions
+* `librtt_stdio.a` - includes additionally some setup so that `printf()` and `getchar()` (i.e. stdio) are redirected
+  to/from RTT without any additional effort
+* `librtt_sysview.a` - support library for Segger https://www.segger.com/products/development-tools/systemview/[SystemView]
+* header files in `SEGGER/Config` and `SEGGER/RTT`
+
+NOTE: Until I've found the proper CMake options, `librtt.a` has to be linked additionally if either `librtt_stdio.a`
+or `librtt_sysview.a` are used.
+
+
+## Building `librtt*.a`
+
+Building the toolchain including this library is covered
+https://github.com/rgrr/playground/tree/main/tools/build-llvm[here].
+
+Building the RTT libraries is controlled with the `LLVM_TOOLCHAIN_CONTRIB_RTT` switch on cmake
+invocation.  Default is `on`, so simply building the toolchain should do it.
+
+For more detailed build instructions check https://github.com/rgrr/playground/tree/main/tools/build-llvm[here].
+
+
+If enabled, the libraries will be built for the selected target architectures.  After installation, the library
+will be placed in the same location as `libclang_rt.builtins.a`, i.e. `$(SYSROOT)/lib`.  Required header files go to `$(SYSROOT)/include`.
+
+
+## Static Configuration
+
+### `SEGGER/Config/SEGGER_RTT_Conf.h`
+
+* three RTT up/down channels
+* RTT channel 0:
+** console up (target -> host) buffer: 1024 bytes
+** console down (host -> target): 16 bytes
+* buffer size for `SEGGER_RTT_printf()`: 64 bytes
+* default mode for console channel is `SEGGER_RTT_MODE_NO_BLOCK_SKIP`
+
+### `SEGGER/Config/SEGGER_SYSVIEW_Conf.h`
+
+* RTT channel 1:
+** SystemView up (target -> host) buffer: 1024 bytes
+** SystemView down (host -> target) buffer: 8 bytes (actually set in SystemView code)
+* `SEGGER_SYSVIEW_USE_STATIC_BUFFER=0`: data is built on the stack
+
+
+## `SYSVIEW.h`
+
+`SYSVIEW.h` is an extra header, which provides some extra target SystemView functionality:
+
+* utility functions to make life even easier for use cases without
+  operating system
+* turn off SystemView code with the switch `SEGGER_SYSVIEW_OFF`
+
+### Utility Functions
+
+The utility functions help to map numbers (ids) to strings.
+The following is a just a short overview.  For parameters see link:SYSVIEW.h[SYSVIEW.h].
+The original SystemView calls are documented https://www.segger.com/downloads/systemview/UM08027[here].
+
+[%autowidth]
+[%header]
+|===
+| Function | Comment
+
+|SYSVIEW_SetSystemInfo()
+|Set some system information.
+If you want to provide extra function names for SystemView output, they go to
+`<sysview-install-dir>/Description/SYSVIEW_<osName>.txt`
+
+|SYSVIEW_Init()
+|Initialize the SystemView buffers and make everything ready.
+
+
+|SYSVIEW_ConfigUpBuffer()
+|Configure another (bigger) buffer for the target -> host communication.
+This can be crucial if the application generates SystemView events in a burst.
+Must happen directly after calling `SYSVIEW_Init()`, especially before
+`SEGGER_SYSVIEW_Start()`.
+
+|SYSVIEW_AddTask()
+|Add a task with `id` and name.  Task ids must be > 32.
+
+|SYSVIEW_AddMarker()
+|Add a marker with `id` and name.
+
+|SYSVIEW_AddInt()
+|Add an interrupt with `number` and name. `SYSVIEW_AddInt(15, "SysTick")` makes Int#15
+more readable.
+|===
+
+
+### Static Configuration
+
+[%autowidth]
+[%header]
+|===
+| Number of... | Limit
+
+|Tasks
+|32
+
+|Markers
+|16
+
+|Interrupts
+|16
+|===
+
+If this is a limit to your needs, you have to change those limits in link:rtt_sysview.c[rtt_sysview.c]
+and rebuild the libraries.
+
+
+## Example
+
+To demonstrate SystemViews capabilities and usage of the utility functions
+there is a https://github.com/rgrr/playground/tree/main/llvm-games/SystemView[small target example]
+in my https://github.com/rgrr/playground[playground].  This example works without operating
+system.
+
+For more examples of SystemView usage and data creation see
+https://mcuoneclipse.com/?s=systemview&submit=Search[MCU on Eclipse].

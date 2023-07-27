@@ -1,6 +1,12 @@
+:imagesdir: doc/png
+:source-highlighter: rouge
+:toc:
+:toclevels: 5
+
 # Profiling
 
-**Note that profiling is experimental.**
+NOTE: Profiling is experimental
+
 
 This add-on enables profiling support for embedded Arm targets.  Profiling uses the standard mechanisms
 provided by clang, transmission of the collected data is done via semihosting which implies that a debugger
@@ -12,26 +18,13 @@ To simplify the library output goes always into the file `default.profraw`.  Add
 libraries are not required because the profiling library provides its own version of semihosting invocation.
 
 
-## Building libclang_rt.profile.a
+## Building `libclang_rt.profile.a`
 
-Building the profiling library is controlled with the **LLVM_TOOLCHAIN_CONTRIB_PROFILE** switch on cmake
-invocation.  To include the profiling library use:
+Building the toolchain including this library is covered
+https://github.com/rgrr/playground/tree/main/tools/build-llvm[here].
 
-```bash
-# "cd" into build directory (one level below LLVM-embedded-toolchain-for-Arm)
-cmake .. -GNinja -DFETCHCONTENT_QUIET=OFF -DLLVM_TOOLCHAIN_CONTRIB_PROFILE=ON
-ninja llvm-toolchain
-ninja package-llvm-toolchain
-```
-
-or with less effort:
-
-```bash
-# "cd" into build directory (one level below LLVM-embedded-toolchain-for-Arm)
-cmake .. -GNinja -DLLVM_TOOLCHAIN_CONTRIB_PROFILE=ON -DFETCHCONTENT_FULLY_DISCONNECTED=ON -DLLVM_TOOLCHAIN_LIBRARY_VARIANTS="aarch64;armv6m_soft_nofp"
-ninja llvm-toolchain
-ninja package-llvm-toolchain
-```
+Building the profiling library is controlled with the `LLVM_TOOLCHAIN_CONTRIB_PROFILE`
+switch on cmake invocation.  This switch defaults to `on`.
 
 If enabled, the library will be built for all enabled target architectures.  After installation, the library
 will be placed in the same location as `libclang_rt.builtins.a`, i.e. `$(SYSROOT)/lib`.
@@ -72,6 +65,14 @@ visualization of the data could be:
 ```
 
 
+## Examples
+
+* https://github.com/rgrr/playground/tree/main/llvm-games/profiling[simple target program]
+  with build and usage instructions
+* https://github.com/rgrr/playground/blob/main/tools/pyocd/ex_semihosting.py[pyOCD script]
+  which can be used as an example for automating coverage collection
+
+
 ## Notes
 
 * again: consider this feature as experimental, feedback is welcome
@@ -80,4 +81,4 @@ visualization of the data could be:
 * a debugger must be connected for successful operation.  Take care that semihost applications issue
   a hard fault if no debugger is connected and a semihost operation should take place.
   For more about this and how to prevent it see 
-  [Using Semihosting the Direct Way](https://mcuoneclipse.com/2023/03/09/using-semihosting-the-direct-way/)
+  https://mcuoneclipse.com/2023/03/09/using-semihosting-the-direct-way/[Using Semihosting the Direct Way]

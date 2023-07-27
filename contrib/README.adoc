@@ -1,0 +1,15 @@
+:imagesdir: doc/png
+:source-highlighter: rouge
+:toc:
+:toclevels: 5
+
+# Some contributions to the LLVM Embedded Toolchain for Arm
+
+The https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm[LLVM Embedded Toolchain for Arm]
+is already a great toolchain.  But why not make your life easier with the following additional libraries: 
+
+* link:profiling[profiling] via semihosting
+* link:rtt[RTT support] for both console I/O and SystemView
+
+Note that the contributed libraries are built per default.  For detailed build instructions
+of the toolchain see https://github.com/rgrr/playground/tree/main/tools/build-llvm[here].
