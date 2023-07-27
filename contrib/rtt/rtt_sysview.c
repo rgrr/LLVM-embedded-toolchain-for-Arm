@@ -169,7 +169,7 @@ void SYSVIEW_AddInt(uint32_t intId, const char *name)
 }   // SYSVIEW_AddInt
 
 
-void SYSVIEW_SetSystem(const char *appName, const char *deviceName, const char *coreName, const char *osName)
+void SYSVIEW_SetSystemInfo(const char *appName, const char *deviceName, const char *coreName, const char *osName)
 /**
  * Function descriptions go to /opt/SEGGER/SystemView_V<version>/Description/SYSVIEW_<osName>.txt
  */
@@ -178,7 +178,7 @@ void SYSVIEW_SetSystem(const char *appName, const char *deviceName, const char *
     sysviewDeviceName = deviceName;
     sysviewCoreName   = coreName;
     sysviewOsName     = osName;
-}   // SYSVIEW_SetSystem
+}   // SYSVIEW_SetSystemInfo
 
 
 void SYSVIEW_Init(uint32_t sysFreq, uint32_t cpuFreq, uint64_t (*getTime)(void))

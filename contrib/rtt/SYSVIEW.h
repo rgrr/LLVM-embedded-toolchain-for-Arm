@@ -22,7 +22,7 @@
     #include "SEGGER_SYSVIEW.h"
 
     // some "high level" SystemView API
-    void SYSVIEW_SetSystem(const char *appName, const char *deviceName, const char *coreName, const char *osName);
+    void SYSVIEW_SetSystemInfo(const char *appName, const char *deviceName, const char *coreName, const char *osName);
     void SYSVIEW_Init(uint32_t sysFreq, uint32_t cpuFreq, uint64_t (*getTime)(void));
     void SYSVIEW_ConfigUpBuffer(void* pBuffer, unsigned BufferSize);
 
@@ -32,7 +32,7 @@
 
 #else
 
-    #define SYSVIEW_SetSystem(...)
+    #define SYSVIEW_SetSystemInfo(...)
     #define SYSVIEW_Init(...)
     #define SYSVIEW_ConfigUpBuffer(...)
 
