@@ -193,7 +193,7 @@ endif()
 # If lld is available then use it by default.
 find_program(LLD_EXECUTABLE lld)
 if(LLD_EXECUTABLE)
-    set(LLVM_ENABLE_LLD ON CACHE BOOL "")
+    set(LLVM_USE_LINKER lld CACHE STRING "")
 endif()
 
 # A lot of files get installed which makes the install messages too
@@ -316,6 +316,9 @@ set(CPACK_ARCHIVE_COMPONENT_INSTALL TRUE)
 set(CPACK_COMPONENTS_GROUPING ALL_COMPONENTS_IN_ONE)
 # When extracting the files put them in an ArmCompiler-.../ directory.
 set(CPACK_COMPONENT_INCLUDE_TOPLEVEL_DIRECTORY TRUE)
+# Compress package in parallel.
+set(CPACK_THREADS 0 CACHE STRING "")
+
 
 if(CMAKE_OSX_ARCHITECTURES)
     # For universal binaries don't include architecture in the package name.
@@ -469,6 +472,8 @@ function(
     target_triple
     flags
     test_executor_params
+    default_boot_flash_addr
+    default_boot_flash_size
     default_flash_addr
     default_flash_size
     default_ram_addr
@@ -501,11 +506,15 @@ function(
             -Dtests-enable-stack-protector=false
             --prefix <INSTALL_DIR>
             --cross-file <BINARY_DIR>/meson-cross-build.txt
-            ${picolibc_SOURCE_DIR}
+            <SOURCE_DIR>
         BUILD_COMMAND ${MESON_EXECUTABLE} configure -Dtests=false
         COMMAND ${MESON_EXECUTABLE} compile
         INSTALL_COMMAND ${MESON_EXECUTABLE} install ${MESON_INSTALL_QUIET}
         TEST_COMMAND ${MESON_EXECUTABLE} configure -Dtests=true
+        # meson<0.64.0 does not properly apply new configuration after
+        # "meson configure -Dtests=false"
+        # use "meson setup --reconfigure" as a workaround
+        COMMAND ${MESON_EXECUTABLE} setup . <SOURCE_DIR> -Dtests=true --reconfigure
         COMMAND ${MESON_EXECUTABLE} test
         COMMAND ${MESON_EXECUTABLE} configure -Dtests=false
         USES_TERMINAL_CONFIGURE FALSE
@@ -582,7 +591,7 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
 
     get_runtimes_flags("${directory}" "${flags}")
 
-    set(compiler_rt_test_flags "--target=${target_triple} -fno-exceptions -fno-rtti -lcrt0-semihost -lsemihost -T picolibcpp.ld")
+    set(compiler_rt_test_flags "${runtimes_flags} -fno-exceptions -fno-rtti -lcrt0-semihost -lsemihost -T picolibcpp.ld")
     if(variant STREQUAL "armv6m_soft_nofp")
         set(compiler_rt_test_flags "${compiler_rt_test_flags} -fomit-frame-pointer")
     endif()
@@ -633,15 +642,14 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
         # Always run the build command so that incremental builds are correct.
         BUILD_ALWAYS TRUE
         CONFIGURE_HANDLED_BY_BUILD TRUE
-    )
-    ExternalProject_Get_Property(compiler_rt_${variant} INSTALL_DIR)
-    # Copy compiler-rt lib directory, moving libraries out of their
-    # target-specific subdirectory.
-    add_custom_command(
-        TARGET compiler_rt_${variant}
-        POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_directory
-            ${INSTALL_DIR}/lib/${target_triple} "${LLVM_BINARY_DIR}/${directory}/lib"
+        INSTALL_COMMAND ${CMAKE_COMMAND} --install .
+        # Copy compiler-rt lib directory, moving libraries out of their
+        # target-specific subdirectory.
+        COMMAND
+            ${CMAKE_COMMAND}
+            -E copy_directory
+            <INSTALL_DIR>/lib/${target_triple}
+            "${LLVM_BINARY_DIR}/${directory}/lib"
     )
 
     add_dependencies(
@@ -827,6 +835,8 @@ function(add_library_variant target_arch)
         QEMU_MACHINE
         QEMU_CPU
         QEMU_PARAMS
+        BOOT_FLASH_ADDRESS
+        BOOT_FLASH_SIZE
         FLASH_ADDRESS
         FLASH_SIZE
         RAM_ADDRESS
@@ -860,7 +870,6 @@ function(add_library_variant target_arch)
 
     set(directory "${TARGET_LIBRARIES_DIR}/${parent_dir_name}/${variant}")
     set(VARIANT_COMPILE_FLAGS "--target=${target_triple} ${VARIANT_COMPILE_FLAGS}")
-    make_config_cfg("${directory}" "${variant}" "${VARIANT_COMPILE_FLAGS}")
     get_test_executor_params(
         "${target_triple}"
         "${VARIANT_QEMU_MACHINE}"
@@ -880,6 +889,8 @@ function(add_library_variant target_arch)
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
             "${test_executor_params}"
+            "${VARIANT_BOOT_FLASH_ADDRESS}"
+            "${VARIANT_BOOT_FLASH_SIZE}"
             "${VARIANT_FLASH_ADDRESS}"
             "${VARIANT_FLASH_SIZE}"
             "${VARIANT_RAM_ADDRESS}"
@@ -948,8 +959,10 @@ add_library_variant(
     MULTILIB_FLAGS "--target=aarch64-none-unknown-elf"
     QEMU_MACHINE "virt"
     QEMU_CPU "cortex-a57"
-    FLASH_ADDRESS 0x40000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x40000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x40001000
+    FLASH_SIZE 0x3ff000
     RAM_ADDRESS 0x40400000
     RAM_SIZE 2M
     STACK_SIZE 8K
@@ -961,8 +974,10 @@ add_library_variant(
     QEMU_MACHINE "none"
     QEMU_CPU "ti925t"
     QEMU_PARAMS "-m 1G"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -974,8 +989,10 @@ add_library_variant(
     QEMU_MACHINE "none"
     QEMU_CPU "arm926"
     QEMU_PARAMS "-m 1G"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -986,8 +1003,76 @@ add_library_variant(
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv6m"
     MULTILIB_FLAGS "--target=thumbv6m-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an385"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
+)
+# clang does not correctly handle +nofp and +fp for armv7a and armv7r in march.
+# Using mfpu as a workaround.
+add_library_variant(
+    armv7a
+    SUFFIX soft_nofp
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7a -mfpu=none"
+    MULTILIB_FLAGS "--target=armv7-none-unknown-eabi -mfpu=none"
+    QEMU_MACHINE "none"
+    QEMU_CPU "cortex-a7"
+    QEMU_PARAMS "-m 1G"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
+)
+add_library_variant(
+    armv7a
+    SUFFIX hard_vfpv3_d16
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7a -mfpu=vfpv3-d16"
+    MULTILIB_FLAGS "--target=armv7-none-unknown-eabihf -mfpu=vfpv3-d16"
+    QEMU_MACHINE "none"
+    QEMU_CPU "cortex-a8"
+    QEMU_PARAMS "-m 1G"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
+)
+add_library_variant(
+    armv7r
+    SUFFIX soft_nofp
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7r -mfpu=none"
+    MULTILIB_FLAGS "--target=armv7r-none-unknown-eabi -mfpu=none"
+    QEMU_MACHINE "none"
+    QEMU_CPU "cortex-r5f"
+    QEMU_PARAMS "-m 1G"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
+)
+add_library_variant(
+    armv7r
+    SUFFIX hard_vfpv3_d16
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7r -mfpu=vfpv3-d16"
+    MULTILIB_FLAGS "--target=armv7r-none-unknown-eabihf -mfpu=vfpv3-d16"
+    QEMU_MACHINE "none"
+    QEMU_CPU "cortex-r5f"
+    QEMU_PARAMS "-m 1G"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -999,8 +1084,25 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an385"
     QEMU_CPU "cortex-m3"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
+)
+add_library_variant(
+    armv7m
+    SUFFIX soft_fpv4_sp_d16
+    COMPILE_FLAGS "-mfloat-abi=softfp -march=armv7m -mfpu=fpv4-sp-d16"
+    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=fpv4-sp-d16"
+    QEMU_MACHINE "mps2-an386"
+    QEMU_CPU "cortex-m4"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -1012,8 +1114,10 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -1025,8 +1129,10 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv4-sp-d16"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -1038,8 +1144,10 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv5-d16"
     QEMU_MACHINE "mps2-an500"
     QEMU_CPU "cortex-m7"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -1051,8 +1159,10 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an505"
     QEMU_CPU "cortex-m33"
-    FLASH_ADDRESS 0x10000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x10000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x10001000
+    FLASH_SIZE 0x3ff000
     RAM_ADDRESS 0x80000000
     RAM_SIZE 16M
     STACK_SIZE 4K
@@ -1064,8 +1174,10 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabihf -mfpu=fpv5-d16"
     QEMU_MACHINE "mps2-an505"
     QEMU_CPU "cortex-m33"
-    FLASH_ADDRESS 0x10000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x10000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x10001000
+    FLASH_SIZE 0x3ff000
     RAM_ADDRESS 0x80000000
     RAM_SIZE 16M
     STACK_SIZE 4K
@@ -1077,7 +1189,9 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
-    FLASH_ADDRESS 0x10000000
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 512K
+    FLASH_ADDRESS 0x01000000
     FLASH_SIZE 2M
     RAM_ADDRESS 0x60000000
     RAM_SIZE 2M
@@ -1090,7 +1204,9 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
-    FLASH_ADDRESS 0x10000000
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 512K
+    FLASH_ADDRESS 0x01000000
     FLASH_SIZE 2M
     RAM_ADDRESS 0x60000000
     RAM_SIZE 2M
@@ -1103,7 +1219,9 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+dsp+mve -mfpu=none"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
-    FLASH_ADDRESS 0x10000000
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 512K
+    FLASH_ADDRESS 0x01000000
     FLASH_SIZE 2M
     RAM_ADDRESS 0x60000000
     RAM_SIZE 2M
@@ -1125,7 +1243,10 @@ add_custom_command(
     "--clang=${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}"
     "--llvm-source=${llvmproject_SOURCE_DIR}"
     >> "${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml"
-  DEPENDS clang "${CMAKE_CURRENT_SOURCE_DIR}/multilib-fpus.py")
+  DEPENDS
+    clang
+    "${CMAKE_CURRENT_SOURCE_DIR}/multilib-fpus.py"
+    "${CMAKE_CURRENT_BINARY_DIR}/multilib-without-fpus.yaml")
 add_custom_target(multilib_yaml ALL DEPENDS
   ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml)
 add_dependencies(llvm-toolchain-runtimes multilib_yaml)
@@ -1241,9 +1362,12 @@ endif()
 if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW OR WIN32)
     set(cpack_generator ZIP)
     set(package_filename_extension ".zip")
+elseif(CMAKE_OSX_ARCHITECTURES)
+    set(cpack_generator DragNDrop)
+    set(package_filename_extension ".dmg")
 else()
-    set(cpack_generator TGZ)
-    set(package_filename_extension ".tar.gz")
+    set(cpack_generator TXZ)
+    set(package_filename_extension ".tar.xz")
 endif()
 # CPACK_PACKAGE_FILE_NAME may refer to the source package so use this variable instead.
 set(binary_package_name ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME})
