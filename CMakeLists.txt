@@ -870,6 +870,7 @@ function(add_library_variant target_arch)
 
     set(directory "${TARGET_LIBRARIES_DIR}/${parent_dir_name}/${variant}")
     set(VARIANT_COMPILE_FLAGS "--target=${target_triple} ${VARIANT_COMPILE_FLAGS}")
+    make_config_cfg("${directory}" "${variant}" "${VARIANT_COMPILE_FLAGS}")
     get_test_executor_params(
         "${target_triple}"
         "${VARIANT_QEMU_MACHINE}"
